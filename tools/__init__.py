@@ -5,7 +5,7 @@ from tools.evidence_ranking import (
     rank_evidence,
     score_source_quality,
 )
-from tools.counterfactuals import generate_scenarios, compare_scenarios
+from tools.counterfactuals import generate_scenarios, compare_scenarios, create_counterfactual_package
 from tools.causality import rank_contributors, identify_primary_drivers
 from tools.safety import (
     scrub_pii,
@@ -30,6 +30,7 @@ __all__ = [
     "score_source_quality",
     "generate_scenarios",
     "compare_scenarios",
+    "create_counterfactual_package",
     "rank_contributors",
     "identify_primary_drivers",
     "scrub_pii",
