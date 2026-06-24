@@ -184,20 +184,59 @@ def extract_risk_factors(profile: PatientProfile, documents: List[str] = None) -
 
 
 
-def extract_citations(factors: List[str]) -> List[Citation]:
+def extract_citations(factors: List[str], documents: List[str] = None) -> List[Citation]:
     """Extracts scientific citations supporting the given list of risk factors.
 
-    In future stages, this tool will:
-    1. Retrieve metadata from retrieved research papers corresponding to the factors.
-    2. Format clean AMA or APA citation records.
+    Can compile citations dynamically from retrieved document metadata if provided.
 
     Args:
         factors: A list of string names of identified risk factors.
+        documents: Optional list of retrieved document strings.
 
     Returns:
         A list of Citation schema objects.
     """
     citations = []
+
+    # If documents are provided, compile citations dynamically by parsing metadata
+    if documents:
+        for doc in documents:
+            # Pattern matching: Source (Year): Content
+            match = re.match(r"^([^(:]+)\s*\((\d{4})\)\s*:\s*(.+)$", doc)
+            if match:
+                source = match.group(1).strip()
+                year = int(match.group(2))
+                title = match.group(3).strip()
+                if len(title) > 60:
+                    title = title[:57] + "..."
+                citations.append(Citation(source=source, title=title, year=year))
+            else:
+                # Fallback parser
+                year_match = re.search(r"\((\d{4})\)", doc)
+                year = int(year_match.group(1)) if year_match else 2020
+                parts = doc.split(":", 1)
+                if len(parts) > 1:
+                    source = parts[0].strip()
+                    title = parts[1].strip()
+                else:
+                    source = "Research Publication"
+                    title = doc.strip()
+                if len(title) > 60:
+                    title = title[:57] + "..."
+                citations.append(Citation(source=source, title=title, year=year))
+
+        # Deduplicate compiled citations
+        seen = set()
+        dedup = []
+        for c in citations:
+            key = (c.source, c.title)
+            if key not in seen:
+                seen.add(key)
+                dedup.append(c)
+        if dedup:
+            return dedup
+
+    # Fallback to key-matching list on factors if no documents are passed or parsing returned empty
     for factor in factors:
         factor_lower = factor.lower()
         if "tobacco" in factor_lower or "smoke" in factor_lower:

@@ -131,7 +131,7 @@ class TestEvidencePipeline(unittest.TestCase):
         """Verifies the creation of an EvidencePackage schema object."""
         docs = retrieve_documents("tobacco smoking age")
         factors = extract_risk_factors(self.profile_heavy, documents=docs)
-        citations = extract_citations([f.factor for f in factors])
+        citations = extract_citations([f.factor for f in factors], documents=docs)
 
         ev_package = EvidencePackage(
             risk_factors=factors,
@@ -143,6 +143,23 @@ class TestEvidencePipeline(unittest.TestCase):
         self.assertEqual(ev_package.retrieved_documents, docs)
         self.assertTrue(len(ev_package.risk_factors) > 0)
         self.assertTrue(len(ev_package.citations) > 0)
+
+    def test_dynamic_citation_generation(self) -> None:
+        """Verifies dynamic citation parsing from custom document strings."""
+        docs = [
+            "Nature Clinical Oncology (2021): Cellular aging is correlated with genetic mutations.",
+            "American Cancer Society Guideline (2023): Healthy diet reduces cancer incidence by 20%."
+        ]
+        citations = extract_citations([], documents=docs)
+        
+        self.assertEqual(len(citations), 2)
+        self.assertEqual(citations[0].source, "Nature Clinical Oncology")
+        self.assertEqual(citations[0].year, 2021)
+        self.assertTrue(citations[0].title.startswith("Cellular aging"))
+
+        self.assertEqual(citations[1].source, "American Cancer Society Guideline")
+        self.assertEqual(citations[1].year, 2023)
+        self.assertTrue(citations[1].title.startswith("Healthy diet"))
 
 
 if __name__ == "__main__":

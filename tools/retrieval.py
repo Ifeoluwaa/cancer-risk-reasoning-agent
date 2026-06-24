@@ -4,6 +4,9 @@ Document retrieval tools for fetching scientific context from ChromaDB.
 """
 
 from typing import List
+from tools.rag.vector_store import ChromaVectorStore
+from tools.rag.retrieval import RAGRetriever
+from tools.rag.ingest import RAGIngestor
 
 
 # A dictionary containing high-fidelity scientific study/guideline snippets mapped to risk categories.
@@ -47,32 +50,83 @@ MOCK_DOCUMENTS = {
     ],
 }
 
+# Global ChromaDB store, retriever, and ingestor for transparent integration
+_store = ChromaVectorStore(persist_directory=None, collection_name="cancer_risk_evidence_production")
+_retriever = RAGRetriever(vector_store=_store)
+_ingestor = RAGIngestor(vector_store=_store)
+_is_populated = False
+
+
+def _ensure_populated() -> None:
+    """Helper to seed ChromaDB with MOCK_DOCUMENTS if empty."""
+    global _is_populated
+    if not _is_populated:
+        if _store.collection.count() == 0:
+            # Seed MOCK_DOCUMENTS
+            for category, docs in MOCK_DOCUMENTS.items():
+                for idx, doc in enumerate(docs):
+                    _ingestor.ingest_document(
+                        text=doc,
+                        metadata={"category": category},
+                        doc_id_prefix=f"{category}_{idx}",
+                        chunk_size=1000,
+                        chunk_overlap=0,
+                    )
+            # Ingest fallbacks too
+            fallbacks = [
+                "WHO Cancer Report (2020): General overview of environmental and lifestyle cancer risk factors.",
+                "PubMed General (2021): Evaluation of baseline cancer risk factors in adult populations."
+            ]
+            for idx, doc in enumerate(fallbacks):
+                _ingestor.ingest_document(
+                    text=doc,
+                    metadata={"category": "fallback"},
+                    doc_id_prefix=f"fallback_{idx}",
+                    chunk_size=1000,
+                    chunk_overlap=0,
+                )
+        _is_populated = True
+
 
 def retrieve_documents(query: str, limit: int = 3) -> List[str]:
-    """Retrieves related research document chunks for a search query from mock storage.
+    """Retrieves related research document chunks for a search query from ChromaDB.
 
     Args:
         query: The search query string.
         limit: Maximum number of document chunks to retrieve.
 
     Returns:
-        A list of retrieved document chunks (mocked strings).
+        A list of retrieved document chunks.
     """
+    _ensure_populated()
+    
     query_lower = query.lower()
-    retrieved = []
+    matched_keys = [k for k in MOCK_DOCUMENTS.keys() if k in query_lower]
+    
+    if matched_keys:
+        retrieved = []
+        # Query ChromaDB specifically for matched categories to preserve semantic mapping
+        for key in matched_keys:
+            res = _store.collection.query(
+                query_texts=[key],
+                where={"category": key},
+                n_results=limit,
+            )
+            if res and res["documents"] and res["documents"][0]:
+                for doc in res["documents"][0]:
+                    if doc not in retrieved:
+                        retrieved.append(doc)
+        if retrieved:
+            return retrieved[:limit]
 
-    for key, docs in MOCK_DOCUMENTS.items():
-        if key in query_lower:
-            for doc in docs:
-                if doc not in retrieved:
-                    retrieved.append(doc)
-
-    # Fallback if no keywords matched
-    if not retrieved:
-        retrieved = [
-            "WHO Cancer Report (2020): General overview of environmental and lifestyle cancer risk factors.",
-            "PubMed General (2021): Evaluation of baseline cancer risk factors in adult populations."
-        ]
-
-    return retrieved[:limit]
+    # If no keywords matched, return the fallback default results from ChromaDB
+    res = _store.collection.query(
+        query_texts=["fallback"],
+        where={"category": "fallback"},
+        n_results=limit,
+    )
+    if res and res["documents"] and res["documents"][0]:
+        return res["documents"][0][:limit]
+        
+    return []
 
