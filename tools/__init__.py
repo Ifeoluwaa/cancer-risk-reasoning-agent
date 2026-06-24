@@ -9,7 +9,12 @@ from tools.safety import (
     detect_prompt_injection,
 )
 from tools.validation import validate_patient_profile, validate_schema_instance
-from tools.orchestration import log_node_execution
+from tools.orchestration import (
+    log_node_execution,
+    dispatch_tasks,
+    aggregate_outputs,
+    validate_workflow_state,
+)
 
 __all__ = [
     "retrieve_documents",
@@ -25,4 +30,7 @@ __all__ = [
     "validate_patient_profile",
     "validate_schema_instance",
     "log_node_execution",
+    "dispatch_tasks",
+    "aggregate_outputs",
+    "validate_workflow_state",
 ]
