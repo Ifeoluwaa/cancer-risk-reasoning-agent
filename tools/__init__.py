@@ -14,6 +14,7 @@ from tools.skeptic import (
     detect_missing_information,
     create_skeptic_package,
 )
+from tools.synthesis import generate_final_report
 from tools.safety import (
     scrub_pii,
     check_prompt_injection,
@@ -45,6 +46,7 @@ __all__ = [
     "retrieve_conflicting_evidence",
     "detect_missing_information",
     "create_skeptic_package",
+    "generate_final_report",
     "scrub_pii",
     "check_prompt_injection",
     "classify_medical_request",
