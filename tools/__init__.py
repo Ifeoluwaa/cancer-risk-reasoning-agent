@@ -7,6 +7,13 @@ from tools.evidence_ranking import (
 )
 from tools.counterfactuals import generate_scenarios, compare_scenarios, create_counterfactual_package
 from tools.causality import rank_contributors, identify_primary_drivers
+from tools.skeptic import (
+    find_uncertainties,
+    verify_evidence,
+    retrieve_conflicting_evidence,
+    detect_missing_information,
+    create_skeptic_package,
+)
 from tools.safety import (
     scrub_pii,
     check_prompt_injection,
@@ -33,6 +40,11 @@ __all__ = [
     "create_counterfactual_package",
     "rank_contributors",
     "identify_primary_drivers",
+    "find_uncertainties",
+    "verify_evidence",
+    "retrieve_conflicting_evidence",
+    "detect_missing_information",
+    "create_skeptic_package",
     "scrub_pii",
     "check_prompt_injection",
     "classify_medical_request",
