@@ -1,4 +1,9 @@
 from tools.retrieval import retrieve_documents
+from tools.rag.chunking import chunk_text
+from tools.rag.embeddings import SimpleLocalEmbeddingFunction
+from tools.rag.vector_store import ChromaVectorStore
+from tools.rag.retrieval import RAGRetriever
+from tools.rag.ingest import RAGIngestor
 from tools.evidence_ranking import (
     extract_risk_factors,
     extract_citations,
@@ -32,6 +37,11 @@ from tools.orchestration import (
 
 __all__ = [
     "retrieve_documents",
+    "chunk_text",
+    "SimpleLocalEmbeddingFunction",
+    "ChromaVectorStore",
+    "RAGRetriever",
+    "RAGIngestor",
     "extract_risk_factors",
     "extract_citations",
     "rank_evidence",
