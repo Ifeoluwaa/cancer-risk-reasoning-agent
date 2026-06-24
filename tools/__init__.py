@@ -1,5 +1,10 @@
 from tools.retrieval import retrieve_documents
-from tools.evidence_ranking import extract_risk_factors, extract_citations
+from tools.evidence_ranking import (
+    extract_risk_factors,
+    extract_citations,
+    rank_evidence,
+    score_source_quality,
+)
 from tools.counterfactuals import generate_scenarios, compare_scenarios
 from tools.safety import (
     scrub_pii,
@@ -20,6 +25,8 @@ __all__ = [
     "retrieve_documents",
     "extract_risk_factors",
     "extract_citations",
+    "rank_evidence",
+    "score_source_quality",
     "generate_scenarios",
     "compare_scenarios",
     "scrub_pii",

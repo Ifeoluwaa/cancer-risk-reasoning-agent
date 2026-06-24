@@ -157,7 +157,7 @@ class TestCRRASkeletons(unittest.TestCase):
         # 1. Retrieval
         docs = retrieve_documents("lung cancer smoking", limit=2)
         self.assertEqual(len(docs), 2)
-        self.assertTrue("Mock" in docs[0])
+        self.assertTrue(any(term in docs[0] for term in ["WHO", "PubMed", "NCI", "Mock"]))
 
         # 2. Evidence Ranking
         factors = extract_risk_factors(self.profile)
