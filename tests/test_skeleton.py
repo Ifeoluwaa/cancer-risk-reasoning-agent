@@ -179,7 +179,7 @@ class TestCRRASkeletons(unittest.TestCase):
             self.assertIsInstance(comparisons[0], Comparison)
 
         # 4. Safety
-        clean_text, redacted = scrub_pii("my email is test@email.com and phone is 12345")
+        clean_text, redacted = scrub_pii("my email is test@email.com and phone is 123-456-7890")
         self.assertEqual(len(redacted), 2)
         self.assertTrue("[REDACTED_EMAIL]" in clean_text)
 
