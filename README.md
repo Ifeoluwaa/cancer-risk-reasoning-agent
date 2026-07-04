@@ -14,6 +14,28 @@ The project was developed as part of Kaggle's **AI Agents: Intensive Vibe Coding
 
 ---
 
+
+## 🎥 Demo
+
+**Video Demonstration:** https://youtu.be/K5jlOviWGM8
+
+
+
+## 📸 System Demo
+
+### Patient Overview
+<img src="docs/images/patient_overview.png" width="800">
+
+### Clinical Risk & Drivers
+<img src="docs/images/clinical_risk_drivers.png" width="800">
+
+### Scenario Recommendations
+<img src="docs/images/scenerio_recommendations.png" width="800">
+
+### Skeptic Audit Review
+<img src="docs/images/skeptic_audit_review.png" width="800">
+
+
 ## Problem Statement
 
 Cancer risk is influenced by numerous interacting factors, including genetics, lifestyle, environmental exposure, and previous medical history.
@@ -178,25 +200,6 @@ Current status:
 
 ---
 
-
-## 📸 System Demo
-
-### Patient Overview
-![Patient Overview](docs/images/patient_overview.png)
-
-### Clinical Risk & Drivers
-![Clinical Risk & Drivers](docs/images/clinical_risk_drivers.png)
-
-### Scenario Recommendations
-![Scenario Recommendations](docs/images/scenario_recommendations.png)
-
-### Skeptic Audit Review
-![Skeptic Audit Review](docs/images/skeptic_audit_review.png)
-
-
-## 🎥 Demo
-
-**Video Demonstration:** https://youtu.be/K5jlOviWGM8
 
 ## Project Highlights
 
