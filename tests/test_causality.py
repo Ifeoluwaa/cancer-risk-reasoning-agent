@@ -94,7 +94,7 @@ class TestCausalityLayer(unittest.TestCase):
         self.assertIsInstance(package, CausalityPackage)
         self.assertEqual(package.primary_drivers, ["Tobacco Smoke Exposure"])
         self.assertEqual(package.causal_confidence, "high")
-        self.assertEqual(len(package.ranked_contributors), 3)
+        self.assertEqual(len(package.ranked_contributors), 5)
 
     def test_empty_or_low_evidence_cases(self) -> None:
         """Verifies behavior when input factor list is empty or contains only low evidence."""

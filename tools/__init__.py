@@ -20,6 +20,8 @@ from tools.skeptic import (
     create_skeptic_package,
 )
 from tools.synthesis import generate_final_report
+from tools.interaction import detect_interactions
+from tools.attribution import calculate_attribution
 from tools.safety import (
     scrub_pii,
     check_prompt_injection,
@@ -57,6 +59,8 @@ __all__ = [
     "detect_missing_information",
     "create_skeptic_package",
     "generate_final_report",
+    "detect_interactions",
+    "calculate_attribution",
     "scrub_pii",
     "check_prompt_injection",
     "classify_medical_request",

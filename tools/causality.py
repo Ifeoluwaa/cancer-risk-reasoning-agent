@@ -17,6 +17,16 @@ def rank_contributors(factors: List[RiskFactor], profile: Optional[PatientProfil
     Returns:
         A list of Contributor schemas.
     """
+    from tools.attribution import calculate_attribution
+    from schemas.contracts import EvidencePackage
+
+    if profile is not None:
+        # Detect active interactions if present in the caller/stack or via detection
+        from tools.interaction import detect_interactions
+        interactions = detect_interactions(profile, factors)
+        evidence = EvidencePackage(risk_factors=factors, citations=[], retrieved_documents=[], interactions=interactions)
+        return calculate_attribution(profile, evidence)
+
     sorted_factors = sorted(factors, key=lambda f: f.evidence_score, reverse=True)
 
     contributors = []
@@ -24,25 +34,15 @@ def rank_contributors(factors: List[RiskFactor], profile: Optional[PatientProfil
         rank = i + 1
         reason = f"Ranked {rank} contributor with {rf.evidence_strength} evidence strength (score: {rf.evidence_score:.2f})."
 
-        if profile:
-            factor_lower = rf.factor.lower()
-            if "smoke" in factor_lower or "tobacco" in factor_lower:
-                reason += f" Matches patient history of smoking {profile.smoking_years} years."
-            elif "age" in factor_lower:
-                reason += f" Matches patient age of {profile.age} years (increases susceptibility)."
-            elif "genetic" in factor_lower or "familial" in factor_lower:
-                mutations_str = ", ".join(profile.known_mutations) if profile.known_mutations else "none detected"
-                reason += f" Matches family history of cancer with mutations: {mutations_str}."
-            elif "sun" in factor_lower or "uv" in factor_lower:
-                reason += f" Matches history of high sun exposure ({profile.sun_exposure})."
-            elif "alcohol" in factor_lower:
-                reason += f" Matches alcohol consumption level of {profile.alcohol_use}."
-
+        from tools.impact_tier import classify_impact_tier, generate_visual_bar
+        fallback_score = rf.evidence_score * 100.0 if rf.evidence_score is not None else 0.0
         contributors.append(
             Contributor(
                 factor=rf.factor,
                 rank=rank,
                 reason=reason,
+                impact_tier=classify_impact_tier(fallback_score),
+                impact_bar=generate_visual_bar(fallback_score)
             )
         )
     return contributors

@@ -3,7 +3,9 @@
 Responsible for identifying uncertainty, missing information, and conflicting evidence in conclusions.
 """
 
+from typing import Optional
 from schemas.contracts import (
+    PatientProfile,
     EvidencePackage,
     CausalityPackage,
     CounterfactualPackage,
@@ -24,6 +26,7 @@ class SkepticAgent:
         evidence: EvidencePackage,
         causality: CausalityPackage,
         counterfactual: CounterfactualPackage,
+        profile: Optional[PatientProfile] = None,
     ) -> SkepticPackage:
         """Evaluates previous steps and identifies limitations and uncertainty.
 
@@ -31,46 +34,38 @@ class SkepticAgent:
             evidence: The EvidencePackage from the Evidence Agent.
             causality: The CausalityPackage from the Causality Agent.
             counterfactual: The CounterfactualPackage from the Counterfactual Agent.
+            profile: Optional PatientProfile.
 
         Returns:
             A SkepticPackage with critiqued findings and adjusted confidence scores.
         """
-        uncertainties = []
-        limitations = []
-        conflicting = []
-        missing_info = []
+        from tools.skeptic import (
+            find_uncertainties,
+            verify_evidence,
+            retrieve_conflicting_evidence,
+            detect_missing_information,
+            calculate_confidence
+        )
 
-        # Check for genetic details in the evidence
-        has_genetic = any("genetic" in rf.factor.lower() or "mutation" in rf.factor.lower() for rf in evidence.risk_factors)
-        if not has_genetic:
-            missing_info.append("Genetic testing data (e.g. BRCA status is unconfirmed in general profiles)")
-            uncertainties.append("Causal link assumes default baseline without custom germline variant screening.")
+        uncertainties = find_uncertainties(evidence, causality, profile=profile)
+        limitations = verify_evidence(evidence, profile=profile)
+        conflicting = retrieve_conflicting_evidence(evidence)
+        missing_info = detect_missing_information(evidence, profile=profile)
 
-        # Check for occupational exposure
-        limitations.append("Occupational history is self-reported and lacks precise quantitative dosimetry.")
+        # Dynamic adjustment of confidence based on evidence quality and quantity
+        adjusted_confidence = calculate_confidence(evidence, causality, uncertainties)
 
-        # Gather any conflicting evidence mock info
-        for rf in evidence.risk_factors:
-            if "tobacco" in rf.factor.lower() or "smoke" in rf.factor.lower():
-                conflicting.append(
-                    ConflictingEvidence(
-                        factor=rf.factor,
-                        evidence="Some historical confounding variables (e.g., occupational exposures) exist in lung cancer cohorts.",
-                        source="Epidemiology Journal 2010",
-                    )
-                )
+        from tools.questioning import generate_followup_questions
 
-        # Default adjustment of confidence
-        adjusted_confidence = "medium"
-        if causality.causal_confidence == "high" and len(uncertainties) == 0:
-            adjusted_confidence = "high"
-        elif causality.causal_confidence == "low":
-            adjusted_confidence = "low"
+        recommended_questions = []
+        if profile:
+            recommended_questions = generate_followup_questions(profile, evidence, uncertainties)
 
         return SkepticPackage(
             confidence=adjusted_confidence,
-            uncertainties=uncertainties or ["Baseline environmental interactions are poorly quantified."],
+            uncertainties=uncertainties,
             limitations=limitations,
             conflicting_evidence=conflicting,
             missing_information=missing_info,
+            recommended_questions=recommended_questions,
         )

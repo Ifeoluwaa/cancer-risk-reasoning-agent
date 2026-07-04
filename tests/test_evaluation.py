@@ -36,6 +36,16 @@ class TestCRRAEvaluationFramework(unittest.TestCase):
             "missing_info_profile",
             "red_safety_profile",
             "yellow_safety_profile",
+            "healthy_baseline_profile",
+            "heavy_smoker_profile",
+            "brca_mutation_profile",
+            "obesity_profile",
+            "alcohol_misuse_profile",
+            "occupational_exposure_profile",
+            "mixed_lifestyle_profile",
+            "previous_cancer_history_profile",
+            "multiple_interacting_factors_profile",
+            "low_information_patient_profile",
         ]
         for key in expected_keys:
             self.assertIn(key, SYNTHETIC_PROFILES)

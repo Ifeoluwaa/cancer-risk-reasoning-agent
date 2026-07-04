@@ -184,3 +184,57 @@ def evaluate_safety_compliance(state: WorkflowState, expected_safety_status: str
         "disclaimer_present": disclaimer_present,
         "overall_score": overall,
     }
+
+
+def evaluate_explainability_and_completeness(state: WorkflowState) -> Dict[str, Any]:
+    """Score the reasoning trace completeness, traceability, and confidence calibration.
+
+    Scores range from 0.0 to 1.0.
+    """
+    if state.security_package and state.security_package.safety_status == "red":
+        return {
+            "trace_completeness": 1.0,
+            "contributor_traceability": 1.0,
+            "evidence_traceability": 1.0,
+            "recommendation_explainability": 1.0,
+            "overall_score": 1.0,
+        }
+
+    # 1. Trace Completeness: check if intermediate package objects are generated
+    has_causality = state.causality_package is not None
+    has_counterfactual = state.counterfactual_package is not None
+    has_skeptic = state.skeptic_package is not None
+    trace_score = 1.0 if (has_causality and has_counterfactual and has_skeptic) else 0.5
+
+    # 2. Contributor Traceability: check if contributors have tier and bar populated
+    contrib_score = 1.0
+    if has_causality and state.causality_package.ranked_contributors:
+        for c in state.causality_package.ranked_contributors:
+            if not c.impact_tier or not c.impact_bar:
+                contrib_score = 0.5
+                break
+    else:
+        contrib_score = 0.0
+
+    # 3. Evidence Traceability: check if citations exist for the top contributors
+    evidence_score = 1.0 if state.final_report and len(state.final_report.citations) > 0 else 0.0
+
+    # 4. Recommendation Explainability: check if counterfactuals have rationales and impacts
+    rec_score = 1.0
+    if has_counterfactual and state.counterfactual_package.scenarios:
+        for s in state.counterfactual_package.scenarios:
+            if not s.reasoning or not s.expected_effect:
+                rec_score = 0.5
+                break
+    else:
+        rec_score = 0.0
+
+    overall = (trace_score * 0.25) + (contrib_score * 0.25) + (evidence_score * 0.25) + (rec_score * 0.25)
+
+    return {
+        "trace_completeness": trace_score,
+        "contributor_traceability": contrib_score,
+        "evidence_traceability": evidence_score,
+        "recommendation_explainability": rec_score,
+        "overall_score": overall,
+    }

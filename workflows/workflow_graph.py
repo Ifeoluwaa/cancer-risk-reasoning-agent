@@ -65,10 +65,7 @@ class WorkflowGraph:
 
             # 3. Evidence Node
             state.current_step = "EvidenceAgent"
-            evidence_pkg = self.evidence_agent.run(
-                clean_profile,
-                retrieved_docs=["Mock CDC guidelines", "Mock PubMed abstract #14592"],
-            )
+            evidence_pkg = self.evidence_agent.run(clean_profile)
             state.evidence_package = evidence_pkg
 
             # 4. Causality Node
@@ -79,14 +76,14 @@ class WorkflowGraph:
             # 5. Counterfactual Node
             state.current_step = "CounterfactualAgent"
             counterfactual_pkg = self.counterfactual_agent.run(
-                clean_profile, causality_pkg.primary_drivers
+                clean_profile, causality_pkg.primary_drivers, evidence=evidence_pkg
             )
             state.counterfactual_package = counterfactual_pkg
 
             # 6. Skeptic Node
             state.current_step = "SkepticAgent"
             skeptic_pkg = self.skeptic_agent.run(
-                evidence_pkg, causality_pkg, counterfactual_pkg
+                evidence_pkg, causality_pkg, counterfactual_pkg, profile=clean_profile
             )
             state.skeptic_package = skeptic_pkg
 

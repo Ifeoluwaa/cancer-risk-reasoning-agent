@@ -133,6 +133,49 @@ class TestObservabilityInfrastructure(unittest.TestCase):
         self.assertIn("benchmark_execution", event_types)
         self.assertIn("evaluation_execution", event_types)
 
+    def test_idempotent_observability_wrapping(self) -> None:
+        """Verify that repeated setup_observability() calls do not cause infinite recursion."""
+        from workflows.workflow_graph import WorkflowGraph
+        import evaluation.observability as obs
+        
+        # 1. Assert sentinel attributes are present
+        self.assertTrue(getattr(WorkflowGraph.run, "__observability_wrapped__", False))
+        original_func = getattr(WorkflowGraph.run, "__original_func__", None)
+        self.assertIsNotNone(original_func)
+        self.assertNotEqual(WorkflowGraph.run, original_func)
+        
+        # 2. Simulate module reload by resetting the module-level _patched flag and globals
+        obs._patched = False
+        obs.original_graph_run = None
+        
+        # 3. Call setup_observability again
+        obs.setup_observability()
+        
+        # 4. Verify sentinel and original functions are preserved (not double wrapped)
+        self.assertTrue(getattr(WorkflowGraph.run, "__observability_wrapped__", False))
+        self.assertEqual(getattr(WorkflowGraph.run, "__original_func__", None), original_func)
+        
+        # 5. Run the pipeline to verify that it executes successfully without causing RecursionError
+        profile = PatientProfile(
+            session_id="session_idempotent_test",
+            age=30,
+            sex="female",
+            bmi=22.0,
+            smoking_status="never",
+            smoking_years=0,
+            alcohol_use="none",
+            physical_activity="medium",
+            diet_quality="medium",
+            sun_exposure="low",
+            occupation="engineer",
+            environmental_exposure=[],
+            family_history=False,
+            known_mutations=[],
+            previous_cancer_history=False,
+        )
+        state = self.orchestrator.run(profile)
+        self.assertEqual(state.status, "COMPLETED")
+
 
 if __name__ == "__main__":
     unittest.main()

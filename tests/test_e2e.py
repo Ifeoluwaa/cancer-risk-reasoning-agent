@@ -99,12 +99,12 @@ class TestCRRAReasoningPipelineE2E(unittest.TestCase):
         self.assertIsInstance(state.causality_package, CausalityPackage)
         self.assertIsInstance(state.final_report, FinalReport)
 
-        # 3. Verify fallback risk factor extraction
+        # 3. Verify risk factor extraction
         evidence_factors = [rf.factor for rf in state.evidence_package.risk_factors]
-        self.assertIn("General Environmental Factors", evidence_factors)
+        self.assertIn("Genetic/Familial Predisposition", evidence_factors)
 
         # 4. Verify FinalReport and safety disclaimer
-        self.assertIn("General Environmental Factors", state.final_report.top_contributors)
+        self.assertIn("Genetic/Familial Predisposition", state.final_report.top_contributors)
         self.assertIn("not medical advice", state.final_report.safety_disclaimer.lower())
 
     def test_lifestyle_risk_profile_e2e(self) -> None:

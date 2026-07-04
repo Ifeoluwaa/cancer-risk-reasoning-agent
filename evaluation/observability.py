@@ -81,6 +81,7 @@ def wrapped_graph_run(self, state: WorkflowState) -> WorkflowState:
         "session_id": session_id,
     })
 
+    result_state = state
     try:
         if original_graph_run:
             result_state = original_graph_run(self, state)
@@ -214,6 +215,9 @@ def wrapped_run_evaluation_suite(
 
 
 def wrap_agent_run(agent_class, node_name: str) -> None:
+    if getattr(agent_class.run, "__observability_wrapped__", False):
+        return
+
     original_run = agent_class.run
 
     def wrapped_run(self, *args, **kwargs):
@@ -225,9 +229,16 @@ def wrap_agent_run(agent_class, node_name: str) -> None:
             elif hasattr(first_arg, "patient_profile") and first_arg.patient_profile:
                 session_id = first_arg.patient_profile.session_id
 
-        wrapped_log_node_execution(session_id, node_name, "success", [])
-        return original_run(self, *args, **kwargs)
+        try:
+            result = original_run(self, *args, **kwargs)
+            wrapped_log_node_execution(session_id, node_name, "success", [])
+            return result
+        except Exception as e:
+            wrapped_log_node_execution(session_id, node_name, "failed", [str(e)])
+            raise e
 
+    wrapped_run.__observability_wrapped__ = True
+    wrapped_run.__original_func__ = original_run
     agent_class.run = wrapped_run
 
 
@@ -251,18 +262,50 @@ def setup_observability() -> None:
     from agents.skeptic_agent import SkepticAgent
     from agents.synthesis_agent import SynthesisAgent
 
-    original_graph_run = WorkflowGraph.run
-    original_log_node = tools.orchestration.log_node_execution
-    original_retrieve_docs = tools.retrieval.retrieve_documents
-    original_run_benchmark = CRRABenchmarkRunner.run_benchmark
-    original_run_evaluation_suite = LLMJudgeRunner.run_evaluation_suite
+    # 1. Idempotent check for WorkflowGraph.run
+    if getattr(WorkflowGraph.run, "__observability_wrapped__", False):
+        original_graph_run = getattr(WorkflowGraph.run, "__original_func__")
+    else:
+        original_graph_run = WorkflowGraph.run
+        wrapped_graph_run.__observability_wrapped__ = True
+        wrapped_graph_run.__original_func__ = original_graph_run
+        WorkflowGraph.run = wrapped_graph_run
 
-    # Wrap graph and tools
-    WorkflowGraph.run = wrapped_graph_run
-    tools.orchestration.log_node_execution = wrapped_log_node_execution
-    tools.retrieval.retrieve_documents = wrapped_retrieve_documents
-    CRRABenchmarkRunner.run_benchmark = wrapped_run_benchmark
-    LLMJudgeRunner.run_evaluation_suite = wrapped_run_evaluation_suite
+    # 2. Idempotent check for tools.orchestration.log_node_execution
+    if getattr(tools.orchestration.log_node_execution, "__observability_wrapped__", False):
+        original_log_node = getattr(tools.orchestration.log_node_execution, "__original_func__")
+    else:
+        original_log_node = tools.orchestration.log_node_execution
+        wrapped_log_node_execution.__observability_wrapped__ = True
+        wrapped_log_node_execution.__original_func__ = original_log_node
+        tools.orchestration.log_node_execution = wrapped_log_node_execution
+
+    # 3. Idempotent check for tools.retrieval.retrieve_documents
+    if getattr(tools.retrieval.retrieve_documents, "__observability_wrapped__", False):
+        original_retrieve_docs = getattr(tools.retrieval.retrieve_documents, "__original_func__")
+    else:
+        original_retrieve_docs = tools.retrieval.retrieve_documents
+        wrapped_retrieve_documents.__observability_wrapped__ = True
+        wrapped_retrieve_documents.__original_func__ = original_retrieve_docs
+        tools.retrieval.retrieve_documents = wrapped_retrieve_documents
+
+    # 4. Idempotent check for CRRABenchmarkRunner.run_benchmark
+    if getattr(CRRABenchmarkRunner.run_benchmark, "__observability_wrapped__", False):
+        original_run_benchmark = getattr(CRRABenchmarkRunner.run_benchmark, "__original_func__")
+    else:
+        original_run_benchmark = CRRABenchmarkRunner.run_benchmark
+        wrapped_run_benchmark.__observability_wrapped__ = True
+        wrapped_run_benchmark.__original_func__ = original_run_benchmark
+        CRRABenchmarkRunner.run_benchmark = wrapped_run_benchmark
+
+    # 5. Idempotent check for LLMJudgeRunner.run_evaluation_suite
+    if getattr(LLMJudgeRunner.run_evaluation_suite, "__observability_wrapped__", False):
+        original_run_evaluation_suite = getattr(LLMJudgeRunner.run_evaluation_suite, "__original_func__")
+    else:
+        original_run_evaluation_suite = LLMJudgeRunner.run_evaluation_suite
+        wrapped_run_evaluation_suite.__observability_wrapped__ = True
+        wrapped_run_evaluation_suite.__original_func__ = original_run_evaluation_suite
+        LLMJudgeRunner.run_evaluation_suite = wrapped_run_evaluation_suite
 
     # Wrap agents
     wrap_agent_run(SecurityAgent, "SecurityAgent")

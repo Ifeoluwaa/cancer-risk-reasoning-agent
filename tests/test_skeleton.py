@@ -231,13 +231,13 @@ class TestCRRASkeletons(unittest.TestCase):
         cf_agent = CounterfactualAgent()
         cf_pkg = cf_agent.run(sec_pkg.clean_profile, caus_pkg.primary_drivers)
         self.assertIsInstance(cf_pkg, CounterfactualPackage)
-        self.assertEqual(cf_pkg.scenarios[0].scenario_id, "S1")
+        self.assertEqual(cf_pkg.scenarios[0].scenario_id, "S_SMOKE_STOP")
 
         # 5. Skeptic Agent
         skeptic_agent = SkepticAgent()
-        skeptic_pkg = skeptic_agent.run(ev_pkg, caus_pkg, cf_pkg)
+        skeptic_pkg = skeptic_agent.run(ev_pkg, caus_pkg, cf_pkg, profile=sec_pkg.clean_profile)
         self.assertIsInstance(skeptic_pkg, SkepticPackage)
-        self.assertEqual(skeptic_pkg.confidence, "medium")
+        self.assertEqual(skeptic_pkg.confidence, "high")
 
         # 6. Synthesis Agent
         synth_agent = SynthesisAgent()

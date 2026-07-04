@@ -161,6 +161,365 @@ class TestEvidencePipeline(unittest.TestCase):
         self.assertEqual(citations[1].year, 2023)
         self.assertTrue(citations[1].title.startswith("Healthy diet"))
 
+    def test_brca1_generates_genetic_factors(self) -> None:
+        """Verifies that a patient with BRCA1 mutation generates genetic-related risk factors."""
+        from agents.evidence_agent import EvidenceAgent
+        profile = PatientProfile(
+            session_id="test_genetic_brca1",
+            age=30,
+            sex="female",
+            bmi=22.0,
+            smoking_status="never",
+            smoking_years=0,
+            alcohol_use="none",
+            physical_activity="medium",
+            diet_quality="medium",
+            sun_exposure="low",
+            occupation="office",
+            environmental_exposure=[],
+            family_history=False,
+            known_mutations=["BRCA1"],
+            previous_cancer_history=False
+        )
+        agent = EvidenceAgent()
+        pkg = agent.run(profile)
+        factors = [f.factor for f in pkg.risk_factors]
+        self.assertIn("Genetic/Familial Predisposition", factors)
+
+    def test_asbestos_generates_environmental_factors(self) -> None:
+        """Verifies that a patient with asbestos exposure generates environmental-related factors."""
+        from agents.evidence_agent import EvidenceAgent
+        profile = PatientProfile(
+            session_id="test_env_asbestos",
+            age=30,
+            sex="male",
+            bmi=22.0,
+            smoking_status="never",
+            smoking_years=0,
+            alcohol_use="none",
+            physical_activity="medium",
+            diet_quality="medium",
+            sun_exposure="low",
+            occupation="construction",
+            environmental_exposure=["asbestos"],
+            family_history=False,
+            known_mutations=[],
+            previous_cancer_history=False
+        )
+        agent = EvidenceAgent()
+        pkg = agent.run(profile)
+        factors = [f.factor for f in pkg.risk_factors]
+        self.assertTrue(len(pkg.risk_factors) > 0)
+        self.assertTrue(any("Environmental" in f or "Baseline" in f for f in factors))
+
+    def test_smoking_generates_tobacco_factors(self) -> None:
+        """Verifies that active smoking generates tobacco-related factors."""
+        from agents.evidence_agent import EvidenceAgent
+        profile = PatientProfile(
+            session_id="test_smoke_active",
+            age=30,
+            sex="male",
+            bmi=22.0,
+            smoking_status="active",
+            smoking_years=10,
+            alcohol_use="none",
+            physical_activity="medium",
+            diet_quality="medium",
+            sun_exposure="low",
+            occupation="office",
+            environmental_exposure=[],
+            family_history=False,
+            known_mutations=[],
+            previous_cancer_history=False
+        )
+        agent = EvidenceAgent()
+        pkg = agent.run(profile)
+        factors = [f.factor for f in pkg.risk_factors]
+        self.assertIn("Tobacco Smoke Exposure", factors)
+
+    def test_citations_originate_from_retrieved_documents(self) -> None:
+        """Verifies that retrieved citations originate from parsed retrieved documents."""
+        from agents.evidence_agent import EvidenceAgent
+        profile = PatientProfile(
+            session_id="test_citation_source",
+            age=60,
+            sex="male",
+            bmi=22.0,
+            smoking_status="never",
+            smoking_years=0,
+            alcohol_use="none",
+            physical_activity="medium",
+            diet_quality="medium",
+            sun_exposure="low",
+            occupation="office",
+            environmental_exposure=[],
+            family_history=False,
+            known_mutations=[],
+            previous_cancer_history=False
+        )
+        agent = EvidenceAgent()
+        pkg = agent.run(profile)
+        
+        self.assertTrue(len(pkg.citations) > 0)
+        self.assertTrue(len(pkg.retrieved_documents) > 0)
+        for cit in pkg.citations:
+            found = False
+            for doc in pkg.retrieved_documents:
+                if cit.source.lower() in doc.lower() or cit.title[:20].lower() in doc.lower():
+                    found = True
+                    break
+            self.assertTrue(found, f"Citation source '{cit.source}' or title '{cit.title}' was not found in retrieved documents.")
+
+    def test_brca1_appears_in_reasoning(self) -> None:
+        """Verifies that BRCA1 is present in the final report/reasoning output."""
+        from agents.orchestrator_agent import OrchestratorAgent
+        profile = PatientProfile(
+            session_id="test_brca1_reasoning",
+            age=35,
+            sex="female",
+            bmi=22.0,
+            smoking_status="never",
+            smoking_years=0,
+            alcohol_use="none",
+            physical_activity="medium",
+            diet_quality="medium",
+            sun_exposure="low",
+            occupation="office",
+            environmental_exposure=[],
+            family_history=False,
+            known_mutations=["BRCA1"],
+            previous_cancer_history=False
+        )
+        orchestrator = OrchestratorAgent()
+        state = orchestrator.run(profile)
+        
+        self.assertIn("Genetic/Familial Predisposition", state.final_report.top_contributors)
+
+    def test_asbestos_appears_in_reasoning(self) -> None:
+        """Verifies that asbestos exposure is reflected in the final report/reasoning output."""
+        from agents.orchestrator_agent import OrchestratorAgent
+        profile = PatientProfile(
+            session_id="test_asbestos_reasoning",
+            age=35,
+            sex="male",
+            bmi=22.0,
+            smoking_status="never",
+            smoking_years=0,
+            alcohol_use="none",
+            physical_activity="medium",
+            diet_quality="medium",
+            sun_exposure="low",
+            occupation="construction",
+            environmental_exposure=["asbestos"],
+            family_history=False,
+            known_mutations=[],
+            previous_cancer_history=False
+        )
+        orchestrator = OrchestratorAgent()
+        state = orchestrator.run(profile)
+        
+        self.assertIn("Environmental Carcinogen Exposure", state.final_report.top_contributors)
+
+    def test_fallback_factor_not_added_when_valid_factors_exist(self) -> None:
+        """Verifies that General Environmental Factors fallback is not added when genetic/environmental factors exist."""
+        from agents.evidence_agent import EvidenceAgent
+        profile = PatientProfile(
+            session_id="test_no_fallback_when_valid_exist",
+            age=35,
+            sex="female",
+            bmi=22.0,
+            smoking_status="never",
+            smoking_years=0,
+            alcohol_use="none",
+            physical_activity="medium",
+            diet_quality="medium",
+            sun_exposure="low",
+            occupation="office",
+            environmental_exposure=[],
+            family_history=False,
+            known_mutations=["BRCA1"],
+            previous_cancer_history=False
+        )
+        agent = EvidenceAgent()
+        pkg = agent.run(profile)
+        factors = [f.factor for f in pkg.risk_factors]
+        
+        self.assertIn("Genetic/Familial Predisposition", factors)
+        self.assertNotIn("General Environmental Factors", factors)
+
+    def test_obesity_factor_extraction(self) -> None:
+        """Verifies Obesity-related Cancer Risk extraction."""
+        from agents.evidence_agent import EvidenceAgent
+        profile = PatientProfile(
+            session_id="test_obesity",
+            age=30,
+            sex="female",
+            bmi=35.0,
+            smoking_status="never",
+            smoking_years=0,
+            alcohol_use="none",
+            physical_activity="high",
+            diet_quality="high",
+            sun_exposure="low",
+            occupation="office",
+            environmental_exposure=[],
+            family_history=False,
+            known_mutations=[],
+            previous_cancer_history=False
+        )
+        agent = EvidenceAgent()
+        pkg = agent.run(profile)
+        factors = [f.factor for f in pkg.risk_factors]
+        self.assertIn("Obesity-related Cancer Risk", factors)
+
+    def test_physical_inactivity_factor_extraction(self) -> None:
+        """Verifies Physical Inactivity factor extraction."""
+        from agents.evidence_agent import EvidenceAgent
+        profile = PatientProfile(
+            session_id="test_inactivity",
+            age=30,
+            sex="female",
+            bmi=22.0,
+            smoking_status="never",
+            smoking_years=0,
+            alcohol_use="none",
+            physical_activity="low",
+            diet_quality="high",
+            sun_exposure="low",
+            occupation="office",
+            environmental_exposure=[],
+            family_history=False,
+            known_mutations=[],
+            previous_cancer_history=False
+        )
+        agent = EvidenceAgent()
+        pkg = agent.run(profile)
+        factors = [f.factor for f in pkg.risk_factors]
+        self.assertIn("Physical Inactivity", factors)
+
+    def test_poor_diet_factor_extraction(self) -> None:
+        """Verifies Poor Dietary Pattern factor extraction."""
+        from agents.evidence_agent import EvidenceAgent
+        profile = PatientProfile(
+            session_id="test_diet",
+            age=30,
+            sex="female",
+            bmi=22.0,
+            smoking_status="never",
+            smoking_years=0,
+            alcohol_use="none",
+            physical_activity="high",
+            diet_quality="low",
+            sun_exposure="low",
+            occupation="office",
+            environmental_exposure=[],
+            family_history=False,
+            known_mutations=[],
+            previous_cancer_history=False
+        )
+        agent = EvidenceAgent()
+        pkg = agent.run(profile)
+        factors = [f.factor for f in pkg.risk_factors]
+        self.assertIn("Poor Dietary Pattern", factors)
+
+    def test_previous_cancer_factor_extraction(self) -> None:
+        """Verifies Previous Malignancy History factor extraction."""
+        from agents.evidence_agent import EvidenceAgent
+        profile = PatientProfile(
+            session_id="test_prev_cancer",
+            age=30,
+            sex="female",
+            bmi=22.0,
+            smoking_status="never",
+            smoking_years=0,
+            alcohol_use="none",
+            physical_activity="high",
+            diet_quality="high",
+            sun_exposure="low",
+            occupation="office",
+            environmental_exposure=[],
+            family_history=False,
+            known_mutations=[],
+            previous_cancer_history=True
+        )
+        agent = EvidenceAgent()
+        pkg = agent.run(profile)
+        factors = [f.factor for f in pkg.risk_factors]
+        self.assertIn("Previous Malignancy History", factors)
+
+    def test_multiple_simultaneous_factors(self) -> None:
+        """Verifies multiple simultaneous factors are extracted and ranked correctly."""
+        from agents.evidence_agent import EvidenceAgent
+        profile = PatientProfile(
+            session_id="test_multi",
+            age=30,
+            sex="female",
+            bmi=32.0,
+            smoking_status="active",
+            smoking_years=10,
+            alcohol_use="none",
+            physical_activity="low",
+            diet_quality="low",
+            sun_exposure="low",
+            occupation="office",
+            environmental_exposure=[],
+            family_history=False,
+            known_mutations=[],
+            previous_cancer_history=True
+        )
+        agent = EvidenceAgent()
+        pkg = agent.run(profile)
+        factors = [f.factor for f in pkg.risk_factors]
+        self.assertIn("Tobacco Smoke Exposure", factors)
+        self.assertIn("Obesity-related Cancer Risk", factors)
+        self.assertIn("Physical Inactivity", factors)
+        self.assertIn("Poor Dietary Pattern", factors)
+        self.assertIn("Previous Malignancy History", factors)
+
+        # Check ranking order by evidence score (dynamically boosted and adjusted)
+        scores = {f.factor: f.evidence_score for f in pkg.risk_factors}
+        self.assertAlmostEqual(scores["Tobacco Smoke Exposure"], 1.0)
+        self.assertAlmostEqual(scores["Previous Malignancy History"], 0.7225)
+        self.assertAlmostEqual(scores["Obesity-related Cancer Risk"], 0.83)
+        self.assertAlmostEqual(scores["Physical Inactivity"], 0.66)
+        self.assertAlmostEqual(scores["Poor Dietary Pattern"], 0.81)
+
+        # Verify descending sort order in the package
+        for i in range(len(pkg.risk_factors) - 1):
+            self.assertTrue(pkg.risk_factors[i].evidence_score >= pkg.risk_factors[i+1].evidence_score)
+
+    def test_sex_retrieval_context(self) -> None:
+        """Verifies that sex context is appended to BRCA mutation query."""
+        from agents.evidence_agent import EvidenceAgent
+        profile_female = PatientProfile(
+            session_id="test_female_brca",
+            age=30,
+            sex="female",
+            bmi=22.0,
+            smoking_status="never",
+            smoking_years=0,
+            alcohol_use="none",
+            physical_activity="high",
+            diet_quality="high",
+            sun_exposure="low",
+            occupation="office",
+            environmental_exposure=[],
+            family_history=False,
+            known_mutations=["BRCA1"],
+            previous_cancer_history=False
+        )
+        agent = EvidenceAgent()
+        # Mock retrieve_documents to assert the query content
+        from unittest.mock import patch
+        with patch("agents.evidence_agent.retrieve_documents") as mock_retrieve:
+            mock_retrieve.return_value = []
+            agent.run(profile_female)
+            # Assert called with query containing female context
+            args, kwargs = mock_retrieve.call_args
+            self.assertIn("female genetic mutations BRCA", args[0])
+
 
 if __name__ == "__main__":
     unittest.main()
+
+

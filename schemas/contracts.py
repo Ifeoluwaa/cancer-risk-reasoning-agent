@@ -73,6 +73,20 @@ class Citation(BaseModel):
     source: str = Field(..., description="Source journal, database, or publisher")
     title: str = Field(..., description="Title of the publication")
     year: int = Field(..., description="Publication year")
+    evidence_quality: Optional[str] = Field(
+        None, description="Quality classification level of the evidence (e.g. Clinical Guideline, RCT, etc.)"
+    )
+
+
+class RiskInteraction(BaseModel):
+    """Structure representing a clinically meaningful interaction between risk factors."""
+
+    name: str = Field(..., description="Name of the risk interaction")
+    participating_factors: List[str] = Field(..., description="Factors involved in the interaction")
+    rationale: str = Field(..., description="Clinical rationale of the interaction")
+    strength: Literal["high", "medium", "low"] = Field(..., description="Interaction strength")
+    evidence_score: float = Field(..., description="Evidence score representing the strength/relevance")
+    supporting_evidence: List[str] = Field(..., description="Supporting literature or studies")
 
 
 class EvidencePackage(BaseModel):
@@ -87,6 +101,10 @@ class EvidencePackage(BaseModel):
     retrieved_documents: List[str] = Field(
         ..., description="Plain text or names of retrieved reference documents/resources"
     )
+    interactions: List[RiskInteraction] = Field(
+        default_factory=list,
+        description="Clinically meaningful interactions detected between risk factors"
+    )
 
 
 class Contributor(BaseModel):
@@ -95,6 +113,18 @@ class Contributor(BaseModel):
     factor: str = Field(..., description="Name of the contributor/factor")
     rank: int = Field(..., description="Importance rank of the factor (1 is highest)")
     reason: str = Field(..., description="Detailed causal/biological reasoning explanation")
+    attribution_percentage: Optional[float] = Field(
+        None, description="Estimated relative percentage contribution of this factor to overall risk"
+    )
+    classification: Optional[str] = Field(
+        None, description="Classification based on attribution score (e.g. Primary Driver, Major Contributor, etc.)"
+    )
+    impact_tier: Optional[str] = Field(
+        None, description="Clinically interpretable impact tier (e.g. Very High, High, Moderate, Low, Minimal)"
+    )
+    impact_bar: Optional[str] = Field(
+        None, description="Visual bar representation of the impact"
+    )
 
 
 class CausalityPackage(BaseModel):
@@ -149,6 +179,14 @@ class ConflictingEvidence(BaseModel):
     source: str = Field(..., description="Source of the conflicting evidence")
 
 
+class FollowUpQuestion(BaseModel):
+    """Structure representing a targeted follow-up question to improve reasoning quality."""
+
+    question: str = Field(..., description="The targeted follow-up question")
+    rationale: str = Field(..., description="Clinician rationale explanation of why this information matters")
+    impact: str = Field(..., description="Expected qualitative impact on reasoning confidence (e.g. Slightly/Moderately/Significantly improve confidence)")
+
+
 class SkepticPackage(BaseModel):
     """Output of the Skeptic Agent critiquing conclusions, identifying limits and uncertainties."""
 
@@ -166,6 +204,9 @@ class SkepticPackage(BaseModel):
     )
     missing_information: List[str] = Field(
         ..., description="Required profile details that are missing but could improve accuracy"
+    )
+    recommended_questions: Optional[List[FollowUpQuestion]] = Field(
+        default_factory=list, description="Recommended clinical follow-up questions"
     )
 
 

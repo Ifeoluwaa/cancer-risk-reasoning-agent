@@ -23,29 +23,27 @@ class CausalityAgent:
         Returns:
             A CausalityPackage detailing ranked contributors and primary drivers.
         """
-        contributors = []
-        primary_drivers = []
+        from tools.causality import rank_contributors
+        contributors = rank_contributors(evidence.risk_factors, profile=profile)
 
-        # Sort the factors by evidence score as a default mock logic
-        sorted_factors = sorted(evidence.risk_factors, key=lambda x: x.evidence_score, reverse=True)
+        # Primary drivers are those classified as Primary Driver or Major Contributor
+        primary_drivers = [
+            c.factor for c in contributors
+            if c.classification in ["Primary Driver", "Major Contributor"]
+        ]
 
-        for i, rf in enumerate(sorted_factors):
-            rank = i + 1
-            reason = f"Identified as contributor of rank {rank} because of evidence score {rf.evidence_score:.2f}."
-            contributors.append(
-                Contributor(
-                    factor=rf.factor,
-                    rank=rank,
-                    reason=reason,
-                )
-            )
-            if rank == 1:
-                primary_drivers.append(rf.factor)
+        if not primary_drivers and contributors:
+            primary_drivers = [contributors[0].factor]
 
-        # Mock causality confidence based on top driver evidence strength
+        # Determine causality confidence
         causal_confidence = "low"
-        if sorted_factors:
+        if evidence.risk_factors:
+            sorted_factors = sorted(evidence.risk_factors, key=lambda x: x.evidence_score, reverse=True)
             causal_confidence = sorted_factors[0].evidence_strength
+            # If any participating factor has high interaction strength, boost causal confidence
+            interactions = getattr(evidence, "interactions", [])
+            if any(inter.strength == "high" for inter in interactions):
+                causal_confidence = "high"
 
         return CausalityPackage(
             ranked_contributors=contributors,
