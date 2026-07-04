@@ -178,6 +178,26 @@ Current status:
 
 ---
 
+
+## 📸 System Demo
+
+### Patient Overview
+![Patient Overview](docs/images/patient_overview.png)
+
+### Clinical Risk & Drivers
+![Clinical Risk & Drivers](docs/images/clinical_risk_drivers.png)
+
+### Scenario Recommendations
+![Scenario Recommendations](docs/images/scenario_recommendations.png)
+
+### Skeptic Audit Review
+![Skeptic Audit Review](docs/images/skeptic_audit_review.png)
+
+
+## 🎥 Demo
+
+**Video Demonstration:** https://youtu.be/K5jlOviWGM8
+
 ## Project Highlights
 
 * Transparent reasoning instead of black-box prediction
